@@ -122,10 +122,6 @@ def upload_file_to_drive(drive: GoogleDrive, content: Path) -> Optional[GoogleDr
         return None
 
     file = drive.CreateFile({'title': content.name})
-    if not file.uploaded:
-        print(f"Failed to create file: {file}")
-        return None
-
     file.SetContentFile(content)
 
     try:
