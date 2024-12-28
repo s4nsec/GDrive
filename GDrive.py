@@ -54,6 +54,15 @@ def authenticate_google(gauth: GoogleAuth) -> bool:
         Args:
             gauth(GoogleAuth): GoogleAuth object
     """
+    # Tell the user to obtain the client_secrets.json file
+    if not Path("client_secrets.json").exists():
+        print("""
+            The required client_secrets.json file is missing in the current directory.
+            You can obtain the file by following the instructions at:
+            https://support.google.com/cloud/answer/6158849?hl=en
+        """)
+        return False
+
     # Try to load saved client credentials
     gauth.LoadCredentialsFile("mycreds.txt")
 
