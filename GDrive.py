@@ -8,6 +8,16 @@ import json
 from pathlib import Path
 import argparse
 
+def is_authenticated(gauth: GoogleAuth) -> bool:
+    """Check if the user is authenticated with Google
+        Args:
+            gauth(GoogleAuth): GoogleAuth object
+
+        Returns:
+            bool: True if the user is authenticated, False otherwise
+    """
+    return gauth.credentials is not None and not gauth.access_token_expired
+
 def create_shareable_link(gauth: GoogleAuth, file: GoogleDriveFile) -> str:
     """Create a shareable link for a given file
         Args:
@@ -18,6 +28,10 @@ def create_shareable_link(gauth: GoogleAuth, file: GoogleDriveFile) -> str:
             link(str): Shareable link for the file
 
     """
+    if not is_authenticated(gauth):
+        print("Failed to create a shareable link. User is not authenticated")
+        return ""
+
     access_token = gauth.credentials.access_token
     file_id = file['id']
     url = 'https://www.googleapis.com/drive/v3/files/' + file_id + '/permissions?supportsAllDrives=true'
@@ -90,6 +104,10 @@ def upload_file_to_drive(drive: GoogleDrive, content: Path) -> Optional[GoogleDr
             file(Optional[GoogleDriveFile]): GoogleDriveFile object of the uploaded file
             or None if the file was not uploaded successfully
     """
+    if not is_authenticated(drive.auth):
+        print("Failed to upload file. User is not authenticated")
+        return None
+
     if not content.exists():
         print(f"File {content} does not exist")
         return None
