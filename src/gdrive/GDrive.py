@@ -1,8 +1,8 @@
 from typing import Optional
-from pydrive.auth import AuthenticationError, AuthenticationRejected, GoogleAuth, InvalidCredentialsError, RefreshError
-from pydrive.drive import GoogleDrive, GoogleDriveFile
-from pydrive.files import ApiRequestError
-from pydrive.settings import InvalidConfigError
+from pydrive2.auth import AuthenticationError, AuthenticationRejected, GoogleAuth, InvalidCredentialsError, RefreshError
+from pydrive2.drive import GoogleDrive, GoogleDriveFile
+from pydrive2.files import ApiRequestError
+from pydrive2.settings import InvalidConfigError
 import requests
 import json
 from pathlib import Path
