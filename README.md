@@ -11,25 +11,64 @@ Simple CLI for uploading files to Google Drive.
 
 ## Authentication
 
-- Provide OAuth client secrets with `--client-secrets /path/to/client_secrets.json`
-  or set `GDRIVE_CLIENT_SECRETS`.
+- Set `GDRIVE_CLIENT_SECRETS` to your OAuth client secrets JSON path.
 - Credentials are saved by default at `~/.config/gdrive/credentials.json`.
   Override with `--credentials-file` or `GDRIVE_CREDENTIALS_FILE`.
 
-## Usage
-
 ```bash
-gdrive --file /path/to/local/file --client-secrets /path/to/client_secrets.json
+export GDRIVE_CLIENT_SECRETS=/path/to/client_secrets.json
 ```
 
+## Installation
+
+Install the CLI as a tool:
+
 ```bash
-uv run gdrive --file /path/to/local/file --client-secrets /path/to/client_secrets.json
+uv tool install .
+```
+
+Upgrade the installed tool after pulling changes:
+
+```bash
+uv tool upgrade gdrive
+```
+
+Run the tool directly:
+
+```bash
+gdrive --help
+```
+
+Notes:
+
+- OAuth client secrets path is provided at runtime via `GDRIVE_CLIENT_SECRETS`.
+
+## Usage
+
+### Upload
+
+```bash
+gdrive upload --file /path/to/local/file
 ```
 
 Files are private by default. To explicitly create a public link:
 
 ```bash
-gdrive --file /path/to/local/file --client-secrets /path/to/client_secrets.json --public-link
+gdrive upload --file /path/to/local/file --public-link
+```
+
+### Download
+
+Download by file ID only:
+
+```bash
+gdrive download --file-id 1AbCdEfGhIjKlMnOpQrStUvWxYz
+```
+
+Specify a destination path with `--output`:
+
+```bash
+gdrive download --file-id 1AbCdEfGhIjKlMnOpQrStUvWxYz --output /path/to/save/file
 ```
 
 ## Troubleshooting
