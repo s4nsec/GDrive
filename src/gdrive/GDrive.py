@@ -1,6 +1,12 @@
 import os
 from typing import Optional
-from pydrive2.auth import AuthenticationError, AuthenticationRejected, GoogleAuth, InvalidCredentialsError, RefreshError
+from pydrive2.auth import (
+    AuthenticationError,
+    AuthenticationRejected,
+    GoogleAuth,
+    InvalidCredentialsError,
+    RefreshError,
+)
 from pydrive2.drive import GoogleDrive, GoogleDriveFile
 from pydrive2.files import ApiRequestError
 from pydrive2.settings import InvalidConfigError
@@ -11,13 +17,9 @@ import argparse
 
 DEFAULT_OAUTH_SCOPE = "https://www.googleapis.com/auth/drive.file"
 DEFAULT_CREDENTIALS_FILE = Path.home() / ".config" / "gdrive" / "credentials.json"
-LEGACY_CREDENTIALS_FILE = Path("mycreds.txt")
 
 
-def resolve_client_secrets_path(cli_path: Path | None) -> Path | None:
-    if cli_path:
-        return cli_path.expanduser()
-
+def resolve_client_secrets_path() -> Path | None:
     env_path = os.getenv("GDRIVE_CLIENT_SECRETS")
     if env_path:
         return Path(env_path).expanduser()
@@ -61,32 +63,29 @@ def load_stored_credentials(gauth: GoogleAuth, credentials_path: Path) -> None:
         gauth.LoadCredentialsFile(str(credentials_path))
         return
 
-    if LEGACY_CREDENTIALS_FILE.exists():
-        print("Using legacy credentials from mycreds.txt. They will be migrated to the secure credentials path.")
-        gauth.LoadCredentialsFile(str(LEGACY_CREDENTIALS_FILE))
-
 
 def is_authenticated(gauth: GoogleAuth | None) -> bool:
     """Check if the user is authenticated with Google
-        Args:
-            gauth(GoogleAuth): GoogleAuth object
+    Args:
+        gauth(GoogleAuth): GoogleAuth object
 
-        Returns:
-            bool: True if the user is authenticated, False otherwise
+    Returns:
+        bool: True if the user is authenticated, False otherwise
     """
     if not gauth:
         return False
 
     return gauth.credentials is not None and not gauth.access_token_expired
 
+
 def create_shareable_link(gauth: GoogleAuth, file: GoogleDriveFile) -> str:
     """Create a shareable link for a given file
-        Args:
-            gauth(GoogleAuth): GoogleAuth object
-            file(GoogleDriveFile): GoogleDriveFile object
+    Args:
+        gauth(GoogleAuth): GoogleAuth object
+        file(GoogleDriveFile): GoogleDriveFile object
 
-        Returns:
-            link(str): Shareable link for the file
+    Returns:
+        link(str): Shareable link for the file
 
     """
     if not is_authenticated(gauth):
@@ -94,25 +93,39 @@ def create_shareable_link(gauth: GoogleAuth, file: GoogleDriveFile) -> str:
         return ""
 
     access_token = gauth.credentials.access_token
-    file_id = file['id']
-    url = 'https://www.googleapis.com/drive/v3/files/' + file_id + '/permissions?supportsAllDrives=true'
-    headers = {'Authorization': 'Bearer ' + access_token, 'Content-Type': 'application/json'}
-    payload = {'type': 'anyone', 'value': 'anyone', 'role': 'reader'}
+    file_id = file["id"]
+    url = (
+        "https://www.googleapis.com/drive/v3/files/"
+        + file_id
+        + "/permissions?supportsAllDrives=true"
+    )
+    headers = {
+        "Authorization": "Bearer " + access_token,
+        "Content-Type": "application/json",
+    }
+    payload = {"type": "anyone", "value": "anyone", "role": "reader"}
     try:
-        response = requests.post(url, data=json.dumps(payload), headers=headers, timeout=15)
+        response = requests.post(
+            url, data=json.dumps(payload), headers=headers, timeout=15
+        )
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
         print(f"Failed to create shareable link: {e}")
         return ""
 
-    if 'alternateLink' not in file:
-        print("Failed to create shareable link: missing alternate link in upload response")
+    if "alternateLink" not in file:
+        print(
+            "Failed to create shareable link: missing alternate link in upload response"
+        )
         return ""
 
-    link = file['alternateLink']
+    link = file["alternateLink"]
     return link
 
-def authenticate_google(gauth: GoogleAuth, client_secrets_path: Path, credentials_path: Path) -> bool:
+
+def authenticate_google(
+    gauth: GoogleAuth, client_secrets_path: Path, credentials_path: Path
+) -> bool:
     """Authenticate with Google
     It prompts the user to authenticate with Google if the credentials are not
     found or expired.
@@ -121,7 +134,6 @@ def authenticate_google(gauth: GoogleAuth, client_secrets_path: Path, credential
         Args:
             gauth(GoogleAuth): GoogleAuth object
     """
-    # Tell the user to obtain the client_secrets.json file
     if not client_secrets_path.exists():
         print("""
             The required client secrets file is missing.
@@ -133,13 +145,12 @@ def authenticate_google(gauth: GoogleAuth, client_secrets_path: Path, credential
     gauth.settings["client_config_file"] = str(client_secrets_path)
     gauth.settings["oauth_scope"] = [DEFAULT_OAUTH_SCOPE]
 
-    # Try to load saved client credentials
     load_stored_credentials(gauth, credentials_path)
 
     if gauth.credentials is None:
         try:
             gauth.GetFlow()
-            gauth.flow.params.update({'access_type': 'offline'})
+            gauth.flow.params.update({"access_type": "offline"})
         except InvalidConfigError as e:
             print(f"Failed to get flow: {e}")
             return False
@@ -163,7 +174,6 @@ def authenticate_google(gauth: GoogleAuth, client_secrets_path: Path, credential
             print(f"Failed to authorize: {e}")
             return False
 
-    # Save the current credentials to a file
     try:
         gauth.SaveCredentialsFile(str(credentials_path))
         credentials_path.chmod(0o600)
@@ -176,15 +186,18 @@ def authenticate_google(gauth: GoogleAuth, client_secrets_path: Path, credential
 
     return True
 
-def upload_file_to_drive(drive: GoogleDrive, content: Path) -> Optional[GoogleDriveFile]:
-    """Upload a file to Google Drive
-        Args:
-            drive(GoogleDrive): GoogleDrive object
-            content(Path): Path object of the file to upload
 
-        Returns:
-            file(Optional[GoogleDriveFile]): GoogleDriveFile object of the uploaded file
-            or None if the file was not uploaded successfully
+def upload_file_to_drive(
+    drive: GoogleDrive, content: Path
+) -> Optional[GoogleDriveFile]:
+    """Upload a file to Google Drive
+    Args:
+        drive(GoogleDrive): GoogleDrive object
+        content(Path): Path object of the file to upload
+
+    Returns:
+        file(Optional[GoogleDriveFile]): GoogleDriveFile object of the uploaded file
+        or None if the file was not uploaded successfully
     """
     if not is_authenticated(drive.auth):
         print("Failed to upload file. User is not authenticated")
@@ -194,7 +207,7 @@ def upload_file_to_drive(drive: GoogleDrive, content: Path) -> Optional[GoogleDr
         print(f"File {content} does not exist")
         return None
 
-    file = drive.CreateFile({'title': content.name})
+    file = drive.CreateFile({"title": content.name})
     file.SetContentFile(content)
 
     try:
@@ -205,34 +218,104 @@ def upload_file_to_drive(drive: GoogleDrive, content: Path) -> Optional[GoogleDr
 
     return file
 
+
+def download_file_from_drive(
+    drive: GoogleDrive, file_id: str, output_path: Path | None
+) -> Path | None:
+    """Download a file from Google Drive by file ID.
+    Args:
+        drive(GoogleDrive): GoogleDrive object
+        file_id(str): Google Drive file ID
+        output_path(Path | None): Destination path
+
+    Returns:
+        Path | None: Downloaded file path or None on failure
+    """
+    if not is_authenticated(drive.auth):
+        print("Failed to download file. User is not authenticated")
+        return None
+
+    file = drive.CreateFile({"id": file_id})
+    try:
+        file.FetchMetadata(fields="title,originalFilename")
+    except ApiRequestError as e:
+        print(f"Failed to fetch file metadata: {e}")
+        return None
+
+    destination = output_path
+    if not destination:
+        file_name = file.get("title") or file.get("originalFilename")
+        if not file_name:
+            print("Failed to determine output filename. Use --output to specify a path")
+            return None
+        destination = Path(file_name)
+
+    try:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        print(f"Failed to prepare output directory: {e}")
+        return None
+
+    try:
+        file.GetContentFile(str(destination))
+    except ApiRequestError as e:
+        print(f"Failed to download file: {e}")
+        return None
+    except OSError as e:
+        print(f"Failed to write downloaded file: {e}")
+        return None
+
+    return destination
+
+
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description='Upload file to Google Drive')
-    parser.add_argument('-f', '--file', type=Path, required=True, help='File to upload')
+    parser = argparse.ArgumentParser(
+        description="Upload and download files with Google Drive"
+    )
     parser.add_argument(
-        '--client-secrets',
+        "--credentials-file",
         type=Path,
         default=None,
-        help='Path to OAuth client secrets JSON file (or set GDRIVE_CLIENT_SECRETS)',
+        help="Path to saved OAuth credentials (or set GDRIVE_CREDENTIALS_FILE)",
     )
-    parser.add_argument(
-        '--credentials-file',
+
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    upload_parser = subparsers.add_parser(
+        "upload", help="Upload a file to Google Drive"
+    )
+    upload_parser.add_argument(
+        "-f", "--file", type=Path, required=True, help="File to upload"
+    )
+    upload_parser.add_argument(
+        "--public-link",
+        action="store_true",
+        help="Create a public shareable link. Default behavior keeps uploaded files private.",
+    )
+
+    download_parser = subparsers.add_parser(
+        "download", help="Download a file from Google Drive"
+    )
+    download_parser.add_argument(
+        "--file-id", required=True, help="Google Drive file ID to download"
+    )
+    download_parser.add_argument(
+        "-o",
+        "--output",
         type=Path,
         default=None,
-        help='Path to saved OAuth credentials (or set GDRIVE_CREDENTIALS_FILE)',
+        help="Destination path for the downloaded file. Defaults to the remote filename in the current directory.",
     )
-    parser.add_argument(
-        '--public-link',
-        action='store_true',
-        help='Create a public shareable link. Default behavior keeps uploaded files private.',
-    )
+
     return parser.parse_args()
+
 
 def main():
     args = parse_args()
 
-    client_secrets_path = resolve_client_secrets_path(args.client_secrets)
+    client_secrets_path = resolve_client_secrets_path()
     if not client_secrets_path:
-        print("Missing client secrets path. Use --client-secrets or set GDRIVE_CLIENT_SECRETS.")
+        print("Missing client secrets path. Set GDRIVE_CLIENT_SECRETS.")
         return
 
     credentials_path = resolve_credentials_path(args.credentials_file)
@@ -246,22 +329,36 @@ def main():
         print("Failed to authenticate with Google")
         return
 
-    file = upload_file_to_drive(drive, args.file)
-    if file is None:
-        print(f"Failed to upload {args.file.name}")
+    if args.command == "upload":
+        file = upload_file_to_drive(drive, args.file)
+        if not file:
+            print(f"Failed to upload {args.file.name}")
+            return
+
+        if not args.public_link:
+            print(
+                f"[+] Successfully uploaded {args.file.name}. File remains private by default."
+            )
+            return
+
+        print(
+            "[!] Public link requested. Applying 'anyone with link can read' permission."
+        )
+        link = create_shareable_link(gauth, file)
+        if link == "":
+            print(f"Failed to create shareable link for {args.file.name}")
+            return
+
+        print(f"[+] Successfully uploaded {args.file.name} to {link}")
         return
 
-    if not args.public_link:
-        print(f"[+] Successfully uploaded {args.file.name}. File remains private by default.")
+    destination = download_file_from_drive(drive, args.file_id, args.output)
+    if not destination:
+        print(f"Failed to download file with ID {args.file_id}")
         return
 
-    print("[!] Public link requested. Applying 'anyone with link can read' permission.")
-    link = create_shareable_link(gauth, file)
-    if link == "":
-        print(f"Failed to create shareable link for {args.file.name}")
-        return
+    print(f"[+] Successfully downloaded file with ID {args.file_id} to {destination}")
 
-    print(f"[+] Successfully uploaded {args.file.name} to {link}")
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
