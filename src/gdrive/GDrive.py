@@ -1,4 +1,6 @@
 import os
+from pathlib import Path
+
 import click
 from pydrive2.auth import (
     AuthenticationError,
@@ -7,12 +9,11 @@ from pydrive2.auth import (
     InvalidCredentialsError,
     RefreshError,
 )
-from pydrive2.drive import GoogleDrive, GoogleDriveFile
-from pydrive2.files import ApiRequestError
+from pydrive2.drive import GoogleDrive
 from pydrive2.settings import InvalidConfigError
-import requests
-import json
-from pathlib import Path
+
+from gdrive.downloadutils import download_file_from_drive
+from gdrive.uploadutils import create_shareable_link, upload_file_to_drive
 
 DEFAULT_OAUTH_SCOPE = "https://www.googleapis.com/auth/drive.file"
 DEFAULT_CREDENTIALS_FILE = Path.home() / ".config" / "gdrive" / "credentials.json"
@@ -61,68 +62,6 @@ def load_stored_credentials(gauth: GoogleAuth, credentials_path: Path) -> None:
     if credentials_path.exists():
         gauth.LoadCredentialsFile(str(credentials_path))
         return
-
-
-def is_authenticated(gauth: GoogleAuth | None) -> bool:
-    """Check if the user is authenticated with Google
-    Args:
-        gauth(GoogleAuth): GoogleAuth object
-
-    Returns:
-        bool: True if the user is authenticated, False otherwise
-    """
-    if not gauth:
-        return False
-
-    return gauth.credentials is not None and not gauth.access_token_expired
-
-
-def create_shareable_link(gauth: GoogleAuth, file: GoogleDriveFile) -> str:
-    """Create a shareable link for a given file
-    Args:
-        gauth(GoogleAuth): GoogleAuth object
-        file(GoogleDriveFile): GoogleDriveFile object
-
-    Returns:
-        link(str): Shareable link for the file
-
-    """
-    if not is_authenticated(gauth):
-        click.echo(
-            "Failed to create a shareable link. User is not authenticated", err=True
-        )
-        return ""
-
-    access_token = gauth.credentials.access_token
-    file_id = file["id"]
-    url = (
-        "https://www.googleapis.com/drive/v3/files/"
-        + file_id
-        + "/permissions?supportsAllDrives=true"
-    )
-    headers = {
-        "Authorization": "Bearer " + access_token,
-        "Content-Type": "application/json",
-    }
-    payload = {"type": "anyone", "value": "anyone", "role": "reader"}
-    try:
-        response = requests.post(
-            url, data=json.dumps(payload), headers=headers, timeout=15
-        )
-        response.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        click.echo(f"Failed to create shareable link: {e}", err=True)
-        return ""
-
-    if "alternateLink" not in file:
-        click.echo(
-            "Failed to create shareable link: missing alternate link in upload response",
-            err=True,
-        )
-        return ""
-
-    link = file["alternateLink"]
-    return link
 
 
 def authenticate_google(
@@ -190,88 +129,6 @@ def authenticate_google(
         return False
 
     return True
-
-
-def upload_file_to_drive(drive: GoogleDrive, content: Path) -> GoogleDriveFile | None:
-    """Upload a file to Google Drive
-    Args:
-        drive(GoogleDrive): GoogleDrive object
-        content(Path): Path object of the file to upload
-
-    Returns:
-        file(Optional[GoogleDriveFile]): GoogleDriveFile object of the uploaded file
-        or None if the file was not uploaded successfully
-    """
-    if not is_authenticated(drive.auth):
-        click.echo("Failed to upload file. User is not authenticated", err=True)
-        return None
-
-    if not content.exists():
-        click.echo(f"File {content} does not exist", err=True)
-        return None
-
-    file = drive.CreateFile({"title": content.name})
-    file.SetContentFile(content)
-
-    try:
-        file.Upload()
-    except ApiRequestError as e:
-        click.echo(f"Failed to upload file: {e}", err=True)
-        return None
-
-    return file
-
-
-def download_file_from_drive(
-    drive: GoogleDrive, file_id: str, output_path: Path | None
-) -> Path | None:
-    """Download a file from Google Drive by file ID.
-    Args:
-        drive(GoogleDrive): GoogleDrive object
-        file_id(str): Google Drive file ID
-        output_path(Path | None): Destination path
-
-    Returns:
-        Path | None: Downloaded file path or None on failure
-    """
-    if not is_authenticated(drive.auth):
-        click.echo("Failed to download file. User is not authenticated", err=True)
-        return None
-
-    file = drive.CreateFile({"id": file_id})
-    try:
-        file.FetchMetadata(fields="title,originalFilename")
-    except ApiRequestError as e:
-        click.echo(f"Failed to fetch file metadata: {e}", err=True)
-        return None
-
-    destination = output_path
-    if not destination:
-        file_name = file.get("title") or file.get("originalFilename")
-        if not file_name:
-            click.echo(
-                "Failed to determine output filename. Use --output to specify a path",
-                err=True,
-            )
-            return None
-        destination = Path(file_name)
-
-    try:
-        destination.parent.mkdir(parents=True, exist_ok=True)
-    except OSError as e:
-        click.echo(f"Failed to prepare output directory: {e}", err=True)
-        return None
-
-    try:
-        file.GetContentFile(str(destination))
-    except ApiRequestError as e:
-        click.echo(f"Failed to download file: {e}", err=True)
-        return None
-    except OSError as e:
-        click.echo(f"Failed to write downloaded file: {e}", err=True)
-        return None
-
-    return destination
 
 
 def initialize_drive(

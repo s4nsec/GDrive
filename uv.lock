@@ -2,6 +2,13 @@ version = 1
 revision = 1
 requires-python = ">=3.13"
 
+[manifest]
+members = [
+    "downloadutils",
+    "gdrive",
+    "uploadutils",
+]
+
 [[package]]
 name = "cachetools"
 version = "5.5.0"
@@ -136,6 +143,11 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/81/1e/ffcc41b3cebd64ca90b28fd58141c5f68c83d48563c88333ab660e002cd3/cryptography-43.0.3-cp39-abi3-win32.whl", hash = "sha256:d56e96520b1020449bbace2b78b603442e7e378a9b3bd68de65c782db1507995", size = 2623145 },
     { url = "https://files.pythonhosted.org/packages/87/5c/3dab83cc4aba1f4b0e733e3f0c3e7d4386440d660ba5b1e3ff995feb734d/cryptography-43.0.3-cp39-abi3-win_amd64.whl", hash = "sha256:0c580952eef9bf68c4747774cde7ec1d85a6e61de97281f2dba83c7d2c806362", size = 3068026 },
 ]
+
+[[package]]
+name = "downloadutils"
+version = "0.1.0"
+source = { editable = "src/gdrive/downloadutils" }
 
 [[package]]
 name = "gdrive"
@@ -449,6 +461,11 @@ sdist = { url = "https://files.pythonhosted.org/packages/94/e7/b2c673351809dca68
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274", size = 11050 },
 ]
+
+[[package]]
+name = "uploadutils"
+version = "0.1.0"
+source = { editable = "src/gdrive/uploadutils" }
 
 [[package]]
 name = "uritemplate"

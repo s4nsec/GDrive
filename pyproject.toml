@@ -37,7 +37,10 @@ dependencies = [
 
 [tool.setuptools]
 package-dir = {"" = "src"}
-packages = ["gdrive"]
+packages = ["gdrive", "gdrive.uploadutils", "gdrive.downloadutils"]
+
+[tool.uv.workspace]
+members = ["src/gdrive/uploadutils", "src/gdrive/downloadutils"]
 
 [project.scripts]
 gdrive = "gdrive.GDrive:main"
